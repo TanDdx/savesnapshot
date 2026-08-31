@@ -5,10 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SaveSnapshotMod implements ModInitializer {
-    public static final Logger LOGGER = LoggerFactory.getLogger("savesnapshot");
+    public static final String MOD_ID = "savesnapshot";
+    public static final Logger LOGGER = LoggerFactory.getLogger("SaveSnapshot");
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Save Snapshot initialized");
+        LOGGER.info("SaveSnapshot initialized");
     }
 }
