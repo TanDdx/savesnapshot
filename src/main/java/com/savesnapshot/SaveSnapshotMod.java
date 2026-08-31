@@ -1,5 +1,6 @@
 package com.savesnapshot;
 
+import com.savesnapshot.snapshot.AutoSnapshotTicker;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ public class SaveSnapshotMod implements ModInitializer {
     @Override
     public void onInitialize() {
         DebugCommands.register();
+        AutoSnapshotTicker.register();
         LOGGER.info("SaveSnapshot initialized");
     }
 }
