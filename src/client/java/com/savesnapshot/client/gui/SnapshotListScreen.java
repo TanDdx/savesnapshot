@@ -6,6 +6,7 @@ import com.savesnapshot.config.ConfigHolder;
 import com.savesnapshot.config.SnapshotConfig;
 import com.savesnapshot.snapshot.SnapshotMeta;
 import com.savesnapshot.snapshot.SnapshotStorage;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -172,6 +173,12 @@ public class SnapshotListScreen extends Screen {
         String name = entry.meta.name();
         Component title = Component.translatable("savesnapshot.restore.confirm.title", name);
         Component message = Component.translatable("savesnapshot.restore.confirm.message");
+        // 跨版本快照：提示警告但不阻止
+        String currentVersion = SharedConstants.getCurrentVersion().name();
+        if (!currentVersion.equals(entry.meta.gameVersion())) {
+            message = message.copy().append(
+                Component.translatable("savesnapshot.restore.confirm.version_mismatch", entry.meta.gameVersion()));
+        }
         this.minecraft.gui.setScreen(new ConfirmScreen(result -> {
             if (result) {
                 RestoreSession.begin(name);

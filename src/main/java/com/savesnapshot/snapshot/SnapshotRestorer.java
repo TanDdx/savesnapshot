@@ -120,7 +120,8 @@ public final class SnapshotRestorer {
     }
 
     private static void restorePlayers(Path worldDir, Path snapPlayerDir) throws IOException {
-        Path targetDir = worldDir.resolve("playerdata");
+        // 26.2 存档布局：玩家数据在 players/data/（见 LevelResource.PLAYER_DATA_DIR），不是旧版的 playerdata/
+        Path targetDir = worldDir.resolve("players").resolve("data");
         Files.createDirectories(targetDir);
 
         try (Stream<Path> stream = Files.list(snapPlayerDir)) {
