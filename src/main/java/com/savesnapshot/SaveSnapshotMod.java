@@ -10,6 +10,7 @@ public class SaveSnapshotMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        DebugCommands.register();
         LOGGER.info("SaveSnapshot initialized");
     }
 }
