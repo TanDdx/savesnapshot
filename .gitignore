@@ -24,3 +24,4 @@ runs/
 
 # Decompiled Minecraft sources used for API verification
 .mcsrc/
+log/
