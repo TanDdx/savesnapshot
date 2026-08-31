@@ -21,7 +21,7 @@ public final class RestoreSession {
         if (server == null || !RestoreState.tryStart()) {
             return;
         }
-        Path worldDir = server.getWorldPath(LevelResource.ROOT);
+        Path worldDir = server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize();
         String levelId = worldDir.getFileName().toString();
 
         ProgressScreen progress = new ProgressScreen(true);

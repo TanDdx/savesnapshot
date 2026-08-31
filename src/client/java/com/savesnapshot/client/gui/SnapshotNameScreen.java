@@ -5,6 +5,7 @@ import com.savesnapshot.snapshot.SnapshotCapturer;
 import com.savesnapshot.snapshot.SnapshotNameValidator;
 import com.savesnapshot.snapshot.SnapshotStorage;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -76,7 +77,11 @@ public class SnapshotNameScreen extends Screen {
         this.cancelButton = this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onCancel())
             .bounds(centerX + 5, centerY + 25, 100, 20)
             .build());
+    }
 
+    @Override
+    protected void setInitialFocus() {
+        // 26.2 中焦点在 Screen 显示后由框架重置，必须重写此钩子，否则输入框不进入 focus
         this.setInitialFocus(this.nameBox);
     }
 
@@ -106,6 +111,13 @@ public class SnapshotNameScreen extends Screen {
             s.execute(() -> {
                 try {
                     SnapshotCapturer.capture(s, name, false);
+                    Minecraft mc = Minecraft.getInstance();
+                    mc.execute(() -> {
+                        // 捕捉完成后：聊天提示 + 刷新打开中的列表
+                        mc.gui.hud.getChat().addClientSystemMessage(
+                            Component.translatable("savesnapshot.saved", name));
+                        SnapshotListScreen.refreshIfOpen(mc);
+                    });
                 } catch (Exception e) {
                     SaveSnapshotMod.LOGGER.error("Failed to create snapshot {}", name, e);
                 }

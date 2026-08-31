@@ -1,6 +1,7 @@
 {
     "savesnapshot.title": "World Snapshots",
     "savesnapshot.button.new": "New Snapshot",
+    "savesnapshot.button.overwrite": "Overwrite",
     "savesnapshot.button.restore": "Restore",
     "savesnapshot.button.rename": "Rename",
     "savesnapshot.button.delete": "Delete",
@@ -16,7 +17,10 @@
     "savesnapshot.restore.confirm.version_mismatch": " (warning: snapshot from MC %s)",
     "savesnapshot.delete.confirm.title": "Delete Snapshot %s",
     "savesnapshot.delete.confirm.message": "This cannot be undone.",
+    "savesnapshot.overwrite.confirm.title": "Overwrite Snapshot %s",
+    "savesnapshot.overwrite.confirm.message": "The selected save will be overwritten with the current world state. Continue?",
     "savesnapshot.restoring": "Restoring snapshot...",
+    "savesnapshot.saved": "Snapshot %s saved",
     "savesnapshot.name.title.new": "Name New Snapshot",
     "savesnapshot.name.title.rename": "Rename Snapshot %s",
     "savesnapshot.name.label": "Snapshot name",

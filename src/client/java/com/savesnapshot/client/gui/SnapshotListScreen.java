@@ -4,9 +4,11 @@ import com.savesnapshot.SaveSnapshotMod;
 import com.savesnapshot.client.RestoreSession;
 import com.savesnapshot.config.ConfigHolder;
 import com.savesnapshot.config.SnapshotConfig;
+import com.savesnapshot.snapshot.SnapshotCapturer;
 import com.savesnapshot.snapshot.SnapshotMeta;
 import com.savesnapshot.snapshot.SnapshotStorage;
 import net.minecraft.SharedConstants;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -31,6 +33,7 @@ import java.util.Set;
 public class SnapshotListScreen extends Screen {
     private static final Component TITLE = Component.translatable("savesnapshot.title");
     private static final Component NEW_SNAPSHOT = Component.translatable("savesnapshot.button.new");
+    private static final Component OVERWRITE = Component.translatable("savesnapshot.button.overwrite");
     private static final Component RESTORE = Component.translatable("savesnapshot.button.restore");
     private static final Component RENAME = Component.translatable("savesnapshot.button.rename");
     private static final Component DELETE = Component.translatable("savesnapshot.button.delete");
@@ -135,6 +138,25 @@ public class SnapshotListScreen extends Screen {
         }
     }
 
+    /** 存档落盘后调用：若当前打开的是本界面则刷新列表。 */
+    public static void refreshIfOpen(Minecraft mc) {
+        if (mc.gui.screen() instanceof SnapshotListScreen screen) {
+            screen.refresh();
+        }
+    }
+
+    private void refresh() {
+        loadSnapshots();
+        if (this.list != null) {
+            List<SnapshotEntry> entries = new ArrayList<>();
+            for (SnapshotMeta meta : this.snapshots) {
+                entries.add(new SnapshotEntry(meta));
+            }
+            this.list.replaceEntries(entries);
+        }
+        updateButtons();
+    }
+
     private Set<String> existingNames() {
         Set<String> names = new LinkedHashSet<>();
         for (SnapshotMeta meta : this.snapshots) {
@@ -147,6 +169,7 @@ public class SnapshotListScreen extends Screen {
         boolean inWorld = this.storage != null;
         boolean hasSelection = inWorld && this.list != null && this.list.getSelected() != null;
         this.newButton.active = inWorld;
+        this.newButton.setMessage(hasSelection ? OVERWRITE : NEW_SNAPSHOT);
         this.restoreButton.active = hasSelection;
         this.renameButton.active = hasSelection;
         this.deleteButton.active = hasSelection;
@@ -159,7 +182,37 @@ public class SnapshotListScreen extends Screen {
         if (this.server == null || this.storage == null) {
             return;
         }
-        this.minecraft.gui.setScreen(SnapshotNameScreen.forNew(this, this.server, this.storage, existingNames()));
+        SnapshotEntry entry = this.list != null ? this.list.getSelected() : null;
+        if (entry == null) {
+            this.minecraft.gui.setScreen(SnapshotNameScreen.forNew(this, this.server, this.storage, existingNames()));
+            return;
+        }
+        // 有选中项：用当前状态覆盖该存档（先删后建，避免旧区块文件残留）
+        String name = entry.meta.name();
+        this.minecraft.gui.setScreen(new ConfirmScreen(result -> {
+            if (result) {
+                IntegratedServer s = this.server;
+                SnapshotStorage storage = this.storage;
+                s.execute(() -> {
+                    try {
+                        storage.delete(name);
+                        SnapshotCapturer.capture(s, name, false);
+                        Minecraft mc = Minecraft.getInstance();
+                        mc.execute(() -> {
+                            mc.gui.hud.getChat().addClientSystemMessage(
+                                Component.translatable("savesnapshot.saved", name));
+                            refreshIfOpen(mc);
+                        });
+                    } catch (Exception e) {
+                        SaveSnapshotMod.LOGGER.error("Failed to overwrite snapshot {}", name, e);
+                    }
+                });
+                this.minecraft.gui.setScreen(new SnapshotListScreen(this.parent));
+            } else {
+                this.minecraft.gui.setScreen(this);
+            }
+        }, Component.translatable("savesnapshot.overwrite.confirm.title", name),
+            Component.translatable("savesnapshot.overwrite.confirm.message")));
     }
 
     private void onRestore() {
@@ -299,7 +352,7 @@ public class SnapshotListScreen extends Screen {
 
     private class SnapshotList extends ObjectSelectionList<SnapshotEntry> {
         SnapshotList() {
-            super(SnapshotListScreen.this.minecraft, 220, SnapshotListScreen.this.height - 100, 40, 24);
+            super(SnapshotListScreen.this.minecraft, SnapshotListScreen.this.width, SnapshotListScreen.this.height - 100, 40, 24);
         }
 
         @Override

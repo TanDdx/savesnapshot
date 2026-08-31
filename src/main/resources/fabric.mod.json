@@ -1,22 +1,37 @@
 {
-    "schemaVersion": 1,
-    "id": "savesnapshot",
-    "version": "${version}",
-    "name": "SaveSnapshot",
-    "description": "保存/读取单人世界内存状态快照（已加载区块 + 玩家状态），随时读档重来。",
-    "authors": ["mmod"],
-    "license": "MIT",
-    "icon": "assets/savesnapshot/icon.png",
-    "environment": "*",
-    "entrypoints": {
-        "main": ["com.savesnapshot.SaveSnapshotMod"],
-        "client": ["com.savesnapshot.SaveSnapshotClient"],
-        "modmenu": ["com.savesnapshot.SaveSnapshotModMenu"]
-    },
-    "depends": {
-        "fabricloader": ">=0.19.3",
-        "minecraft": "~26.2",
-        "fabric-api": "*",
-        "modmenu": ">=20.0.0"
-    }
+	"schemaVersion": 1,
+	"id": "savesnapshot",
+	"version": "${version}",
+	"name": "SaveSnapshot",
+	"description": "保存/读取单人世界内存状态存档（已加载区块 + 玩家状态），随时读档重来。",
+	"authors": [
+		"TanDdx"
+	],
+	"license": "MIT",
+	"icon": "assets/savesnapshot/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.savesnapshot.SaveSnapshotMod"
+		],
+		"client": [
+			"com.savesnapshot.SaveSnapshotClient"
+		],
+		"modmenu": [
+			"com.savesnapshot.SaveSnapshotModMenu"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"fabric-api": "*",
+		"modmenu": ">=20.0.0"
+	},
+	"contributors": [
+		"Kimi"
+	],
+	"contact": {
+		"sources": "https://github.com/TanDdx/savesnapshot",
+		"homepage": "https://github.com/TanDdx/savesnapshot"
+	}
 }
