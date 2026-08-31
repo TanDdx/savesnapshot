@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "savesnapshot",
+  "version": "${version}",
+  "name": "Save Snapshot",
+  "description": "A Minecraft Fabric mod for save snapshots.",
+  "authors": [
+    "savesnapshot contributors"
+  ],
+  "contact": {
+    "homepage": "https://github.com/savesnapshot/savesnapshot",
+    "sources": "https://github.com/savesnapshot/savesnapshot"
+  },
+  "license": "MIT",
+  "icon": "assets/savesnapshot/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.savesnapshot.SaveSnapshotMod"
+    ],
+    "client": [
+      "com.savesnapshot.client.SaveSnapshotClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": ">=26.2",
+    "java": ">=25"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}
