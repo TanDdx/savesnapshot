@@ -31,6 +31,10 @@ public final class SnapshotCapturer {
 
     public static CaptureResult capture(MinecraftServer server, String name, boolean automatic) throws IOException {
         Path worldDir = server.getWorldPath(LevelResource.ROOT);
+        long freeBytes = Files.getFileStore(worldDir).getUsableSpace();
+        if (freeBytes < 100L * 1024 * 1024) {
+            throw new IOException("磁盘空间不足（剩余 " + freeBytes / 1024 / 1024 + " MB），已中止快照");
+        }
         SnapshotStorage storage = new SnapshotStorage(worldDir);
         Path snapshotDir = storage.dir(name);
         Files.createDirectories(snapshotDir);
