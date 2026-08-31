@@ -21,3 +21,6 @@ Thumbs.db
 # Runtime
 run/
 runs/
+
+# Decompiled Minecraft sources used for API verification
+.mcsrc/
