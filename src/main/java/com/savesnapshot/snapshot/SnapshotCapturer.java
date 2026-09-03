@@ -2,15 +2,21 @@ package com.savesnapshot.snapshot;
 
 import com.savesnapshot.SaveSnapshotMod;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -22,6 +28,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class SnapshotCapturer {
@@ -40,6 +50,7 @@ public final class SnapshotCapturer {
         Files.createDirectories(snapshotDir);
 
         int chunkCount = 0;
+        int entityCount = 0;
         int playerCount = 0;
 
         for (ServerLevel level : server.getAllLevels()) {
@@ -47,6 +58,7 @@ public final class SnapshotCapturer {
             Path chunkDir = snapshotDir.resolve("chunks").resolve(dimName);
             Files.createDirectories(chunkDir);
 
+            LongSet chunkKeys = new LongOpenHashSet();
             for (ChunkHolder holder : getLoadedChunkHolders(level)) {
                 LevelChunk chunk = holder.getTickingChunk();
                 if (chunk == null) {
@@ -57,8 +69,12 @@ public final class SnapshotCapturer {
                 ChunkPos pos = chunk.getPos();
                 Path chunkFile = chunkDir.resolve("c." + pos.x() + "." + pos.z() + ".nbt");
                 NbtIo.writeCompressed(tag, chunkFile);
+                chunkKeys.add(pos.pack());
                 chunkCount++;
             }
+
+            // 实体独立存储（1.17+ 起实体不在区块 NBT 里，而在 <维度>/entities/ 的 region 文件）
+            entityCount += captureEntities(level, chunkDir, chunkKeys);
         }
 
         Path playerDir = snapshotDir.resolve("playerdata");
@@ -81,10 +97,48 @@ public final class SnapshotCapturer {
         meta.save(snapshotDir);
 
         SaveSnapshotMod.LOGGER.info(
-            "Captured snapshot {} in {} (chunks={}, players={})",
-            name, snapshotDir, chunkCount, playerCount);
+            "Captured snapshot {} in {} (chunks={}, entities={}, players={})",
+            name, snapshotDir, chunkCount, entityCount, playerCount);
 
         return new CaptureResult(chunkCount, playerCount, snapshotDir);
+    }
+
+    /**
+     * 把维度内所有已加载实体按区块序列化为 e.<x>.<z>.nbt（原版 EntityStorage 格式：
+     * {DataVersion, Entities: [...], Position: ChunkPos}）。
+     * 每个快照覆盖的区块都会写一条实体记录（哪怕为空）——空记录用于读档时清掉后来出现的实体。
+     * 玩家跳过：走 players/data 恢复。
+     */
+    private static int captureEntities(ServerLevel level, Path chunkDir, LongSet chunkKeys) throws IOException {
+        Map<ChunkPos, List<CompoundTag>> byChunk = new HashMap<>();
+        for (Entity entity : level.getAllEntities()) {
+            if (entity instanceof Player) {
+                continue;
+            }
+            ChunkPos pos = entity.chunkPosition();
+            if (!chunkKeys.contains(pos.pack())) {
+                continue;
+            }
+            ProblemReporter.Collector reporter = new ProblemReporter.Collector();
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, entity.registryAccess());
+            if (entity.save(output)) {
+                byChunk.computeIfAbsent(pos, k -> new ArrayList<>()).add(output.buildResult());
+            }
+        }
+
+        int count = 0;
+        for (long key : chunkKeys) {
+            ChunkPos pos = ChunkPos.unpack(key);
+            List<CompoundTag> entities = byChunk.getOrDefault(pos, List.of());
+            ListTag list = new ListTag();
+            entities.forEach(list::add);
+            CompoundTag chunkTag = NbtUtils.addCurrentDataVersion(new CompoundTag());
+            chunkTag.put("Entities", list);
+            chunkTag.store("Position", ChunkPos.CODEC, pos);
+            NbtIo.writeCompressed(chunkTag, chunkDir.resolve("e." + pos.x() + "." + pos.z() + ".nbt"));
+            count += entities.size();
+        }
+        return count;
     }
 
     private static void saveLevelData(MinecraftServer server, Path snapshotDir) throws IOException {

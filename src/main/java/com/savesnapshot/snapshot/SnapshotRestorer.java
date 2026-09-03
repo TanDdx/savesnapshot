@@ -66,24 +66,39 @@ public final class SnapshotRestorer {
 
                 ResourceKey<Level> levelKey = ResourceKey.create(Registries.DIMENSION, dimId);
                 Path dimWorldDir = DimensionType.getStorageFolder(levelKey, worldDir);
+
+                // c.* -> region/（方块、方块实体）；e.* -> entities/（实体，1.17+ 起独立存储）
                 Path regionDir = dimWorldDir.resolve("region");
                 Files.createDirectories(regionDir);
-
-                RegionStorageInfo info = new RegionStorageInfo(levelId, levelKey, "chunk");
-                try (RegionFileStorage regionStorage = new RegionFileStorage(info, regionDir, true)) {
-                    try (Stream<Path> chunkStream = Files.list(dimDir)) {
-                        for (Path chunkFile : chunkStream.filter(Files::isRegularFile).toList()) {
-                            ChunkPos pos = parseChunkFileName(chunkFile.getFileName().toString());
-                            if (pos == null) {
-                                SaveSnapshotMod.LOGGER.warn("Skipping unrecognized chunk file: {}", chunkFile);
-                                continue;
-                            }
-
-                            CompoundTag tag = NbtIo.readCompressed(chunkFile, NbtAccounter.unlimitedHeap());
-                            regionStorage.write(pos, tag);
-                        }
-                    }
+                RegionStorageInfo chunkInfo = new RegionStorageInfo(levelId, levelKey, "chunk");
+                try (RegionFileStorage chunkStorage = new RegionFileStorage(chunkInfo, regionDir, true)) {
+                    writePrefixedFiles(dimDir, 'c', chunkStorage);
                 }
+
+                Path entitiesDir = dimWorldDir.resolve("entities");
+                Files.createDirectories(entitiesDir);
+                RegionStorageInfo entityInfo = new RegionStorageInfo(levelId, levelKey, "entities");
+                try (RegionFileStorage entityStorage = new RegionFileStorage(entityInfo, entitiesDir, true)) {
+                    writePrefixedFiles(dimDir, 'e', entityStorage);
+                }
+            }
+        }
+    }
+
+    private static void writePrefixedFiles(Path dimDir, char prefix, RegionFileStorage storage) throws IOException {
+        try (Stream<Path> chunkStream = Files.list(dimDir)) {
+            for (Path chunkFile : chunkStream.filter(Files::isRegularFile).toList()) {
+                String fileName = chunkFile.getFileName().toString();
+                if (!fileName.startsWith(prefix + ".")) {
+                    continue;
+                }
+                ChunkPos pos = parseChunkFileName(fileName);
+                if (pos == null) {
+                    SaveSnapshotMod.LOGGER.warn("Skipping unrecognized chunk file: {}", chunkFile);
+                    continue;
+                }
+                CompoundTag tag = NbtIo.readCompressed(chunkFile, NbtAccounter.unlimitedHeap());
+                storage.write(pos, tag);
             }
         }
     }
@@ -103,7 +118,7 @@ public final class SnapshotRestorer {
             return null;
         }
         String base = fileName.substring(0, fileName.length() - 4);
-        if (!base.startsWith("c.")) {
+        if (!base.startsWith("c.") && !base.startsWith("e.")) {
             return null;
         }
         String[] parts = base.substring(2).split("\\.");
